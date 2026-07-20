@@ -68,7 +68,12 @@ upgrade_image() {
   if command -v git >/dev/null 2>&1 && [ -d .git ]; then
     git pull --ff-only || echo "git pull skipped or failed; continue with current files."
   fi
-  docker compose -p relay-station-ops -f docker-compose.image.yml pull
+  if ! docker image inspect postgres:16 >/dev/null 2>&1; then
+    echo "postgres:16 is not available locally; Docker may try to pull it during startup."
+    echo "If Docker Hub is unreachable, import postgres:16 first or configure a registry mirror."
+  fi
+
+  docker compose -p relay-station-ops -f docker-compose.image.yml pull backend frontend
   docker compose -p relay-station-ops -f docker-compose.image.yml up -d
   docker compose -p relay-station-ops -f docker-compose.image.yml exec -T backend python -m alembic -c /app/alembic.ini upgrade head
 }
