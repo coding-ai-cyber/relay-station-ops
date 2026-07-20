@@ -291,10 +291,10 @@ def _update_account_item_check_state(
         item.last_seen_alive_at = now
     elif item.first_abnormal_at is None:
         item.first_abnormal_at = now
-    item.survival_seconds = _survival_seconds(
-        item.first_seen_alive_at or item.created_at,
-        now,
-    )
+    if is_alive:
+        item.survival_seconds = _survival_seconds(item.first_seen_alive_at, now)
+    else:
+        item.survival_seconds = None
 
 
 def _select_accounts(
@@ -397,6 +397,9 @@ def run_admin_key_account_check(
             account.status = "check_failed" if probe.status != "auth_failed" else "api_401"
             if account.first_abnormal_at is None:
                 account.first_abnormal_at = now
+            account.available_started_at = None
+            account.survival_seconds = None
+            account.available_days = None
             batch.abnormal_count += 1
             if probe.status == "auth_failed":
                 batch.status_401_count += 1
@@ -471,6 +474,9 @@ def run_admin_key_account_check(
         else:
             if account.first_abnormal_at is None:
                 account.first_abnormal_at = now
+            account.available_started_at = None
+            account.survival_seconds = None
+            account.available_days = None
             batch.abnormal_count += 1
             if local_status == "rate_limited":
                 batch.status_429_count += 1
@@ -490,12 +496,11 @@ def run_admin_key_account_check(
                 error_code=error_code,
                 error_message=error_message,
             )
-        start = account.first_seen_alive_at or account.available_started_at or account.created_at
-        if start:
-            if start.tzinfo is None:
-                start = start.replace(tzinfo=UTC)
-            account.survival_seconds = max(0, int((now - start).total_seconds()))
-            account.available_days = account.survival_seconds // 86400
+        if is_alive:
+            account.survival_seconds = _survival_seconds(account.available_started_at, now)
+            account.available_days = (
+                account.survival_seconds // 86400 if account.survival_seconds is not None else None
+            )
 
         db.add(
             AccountCheckRecord(

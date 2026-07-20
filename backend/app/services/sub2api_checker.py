@@ -92,7 +92,7 @@ def _status_from_http(status_code: int | None) -> tuple[bool, str]:
 
 
 def _survival_seconds(account: Account, now: datetime) -> int | None:
-    start = account.first_seen_alive_at or account.available_started_at or account.created_at
+    start = account.available_started_at
     if start is None:
         return None
     if start.tzinfo is None:
@@ -186,6 +186,9 @@ def run_sub2api_check(
                     account.first_abnormal_at = now
                 account.status = sub2api_status
                 batch.abnormal_count += 1
+                account.available_started_at = None
+                account.survival_seconds = None
+                account.available_days = None
                 if status_code == 401:
                     batch.status_401_count += 1
                 elif status_code == 403:
@@ -197,10 +200,11 @@ def run_sub2api_check(
             account.last_sub2api_status_code = status_code
             account.last_sub2api_error_code = error_code
             account.last_sub2api_message = error_message
-            account.survival_seconds = _survival_seconds(account, now)
-            account.available_days = (
-                account.survival_seconds // 86400 if account.survival_seconds is not None else None
-            )
+            if is_alive:
+                account.survival_seconds = _survival_seconds(account, now)
+                account.available_days = (
+                    account.survival_seconds // 86400 if account.survival_seconds is not None else None
+                )
 
             db.add(
                 AccountCheckRecord(

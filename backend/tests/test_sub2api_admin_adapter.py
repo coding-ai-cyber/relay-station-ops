@@ -341,7 +341,9 @@ class AutoCheckPurchaseScopeTests(unittest.TestCase):
                 checked_by=uuid.uuid4(),
             )
 
-        check_record = next(item for item in records if item.__class__.__name__ == "AccountCheckRecord")
+        check_record = next(
+            item for item in records if item.__class__.__name__ == "AccountCheckRecord"
+        )
         self.assertEqual(batch.abnormal_count, 1)
         self.assertEqual(batch.status_429_count, 1)
         self.assertEqual(account.items[0].status, "rate_limited")
@@ -401,6 +403,71 @@ class AutoCheckPurchaseScopeTests(unittest.TestCase):
 
         check_records = [item for item in records if item.__class__.__name__ == "AccountCheckRecord"]
         self.assertEqual(check_records[0].raw_response["credentials"], "[REDACTED]")
+
+
+    def test_missing_remote_account_clears_survival_time(self):
+        account = Account(
+            id=uuid.uuid4(),
+            account_no="ACC-MISSING",
+            account_type="openai",
+            sub2api_instance_id=uuid.uuid4(),
+            created_at=datetime(2026, 7, 16, tzinfo=UTC),
+            available_started_at=datetime(2026, 7, 17, tzinfo=UTC),
+            survival_seconds=86400,
+            available_days=1,
+        )
+        instance = SimpleNamespace(
+            id=account.sub2api_instance_id,
+            name="Test instance",
+            base_url="https://sub2api.example",
+            last_probe_at=None,
+            last_probe_status=None,
+            last_probe_message=None,
+            detected_accounts_path=None,
+        )
+        db = MagicMock()
+        records = []
+
+        def add(item):
+            if item.__class__.__name__ == "AccountCheckBatch":
+                item.id = uuid.uuid4()
+                item.alive_count = 0
+                item.abnormal_count = 0
+                item.status_401_count = 0
+                item.status_429_count = 0
+            records.append(item)
+
+        db.add.side_effect = add
+
+        with (
+            patch(
+                "app.services.sub2api_admin_adapter.probe_sub2api_instance",
+                return_value=Sub2APIProbe(
+                    True,
+                    "ok",
+                    "ok",
+                    accounts_path="/api/v1/admin/accounts",
+                    payload={"data": {"items": []}},
+                ),
+            ),
+            patch("app.services.sub2api_admin_adapter._select_accounts", return_value=[account]),
+            patch("app.services.sub2api_admin_adapter._instance_remote_ids", return_value={}),
+        ):
+            batch = run_admin_key_account_check(
+                db=db,
+                instance=instance,
+                checked_by=uuid.uuid4(),
+            )
+
+        check_record = next(
+            item for item in records if item.__class__.__name__ == "AccountCheckRecord"
+        )
+        self.assertEqual(batch.abnormal_count, 1)
+        self.assertEqual(account.status, "unavailable")
+        self.assertIsNone(account.available_started_at)
+        self.assertIsNone(account.survival_seconds)
+        self.assertIsNone(account.available_days)
+        self.assertIsNone(check_record.survived_seconds)
 
 
 if __name__ == "__main__":

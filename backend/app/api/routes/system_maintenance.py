@@ -7,10 +7,12 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from fastapi import APIRouter, Depends, File as UploadField, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.core.config import settings
 from app.core.enums import UserRole
+from app.db.session import get_db
 from app.models.user import User
 from app.services.data_portability import (
     BackupCommandError,
@@ -112,8 +114,11 @@ def import_backup_upload(
     upload: UploadFile = UploadField(...),
     force: bool = False,
     current_user: User = Depends(require_roles(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
 ) -> dict[str, object]:
     del current_user
+    db.rollback()
+    db.close()
     if not upload.filename or not upload.filename.endswith(".zip"):
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only backup zip files are supported")
 

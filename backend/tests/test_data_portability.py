@@ -139,6 +139,74 @@ class DataPortabilityTests(unittest.TestCase):
             self.assertEqual(command[-2], "postgresql://user:pass@localhost:5432/db")
             self.assertEqual((root / "uploads" / "voucher.txt").read_text(encoding="utf-8"), "voucher")
 
+    def test_import_clears_upload_contents_without_removing_upload_root(self):
+        from app.services.data_portability import import_backup, key_fingerprint
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = "field-key-12345678901234567890"
+            upload_dir = root / "uploads"
+            upload_dir.mkdir()
+            (upload_dir / "old.txt").write_text("old", encoding="utf-8")
+            backup = root / "backup.zip"
+            with zipfile.ZipFile(backup, "w") as archive:
+                archive.writestr(
+                    "metadata.json",
+                    json.dumps({"app_field_encryption_key_fingerprint": key_fingerprint(key)}),
+                )
+                archive.writestr("database.dump", b"dump")
+                archive.writestr("uploads/new.txt", "new")
+
+            def fail_if_upload_root_removed(path, *args, **kwargs):
+                if Path(path) == upload_dir:
+                    raise OSError("upload root must not be removed")
+                return None
+
+            with patch("app.services.data_portability.subprocess.run"), patch(
+                "app.services.data_portability.shutil.rmtree",
+                side_effect=fail_if_upload_root_removed,
+            ):
+                import_backup(
+                    input_path=backup,
+                    database_url="postgresql://user:pass@localhost:5432/db",
+                    upload_dir=upload_dir,
+                    app_field_encryption_key=key,
+                )
+
+            self.assertTrue(upload_dir.exists())
+            self.assertFalse((upload_dir / "old.txt").exists())
+            self.assertEqual((upload_dir / "new.txt").read_text(encoding="utf-8"), "new")
+
+    def test_import_ignores_pg17_transaction_timeout_warning(self):
+        import subprocess
+
+        from app.services.data_portability import import_backup, key_fingerprint
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = "field-key-12345678901234567890"
+            backup = root / "backup.zip"
+            with zipfile.ZipFile(backup, "w") as archive:
+                archive.writestr(
+                    "metadata.json",
+                    json.dumps({"app_field_encryption_key_fingerprint": key_fingerprint(key)}),
+                )
+                archive.writestr("database.dump", b"dump")
+
+            stderr = (
+                'pg_restore: error: could not execute query: ERROR: unrecognized configuration parameter \"transaction_timeout\"\n'
+                'Command was: SET transaction_timeout = 0;\n'
+                'pg_restore: warning: errors ignored on restore: 1'
+            )
+            error = subprocess.CalledProcessError(1, ["pg_restore"], stderr=stderr)
+            with patch("app.services.data_portability.subprocess.run", side_effect=error):
+                import_backup(
+                    input_path=backup,
+                    database_url="postgresql://user:pass@localhost:5432/db",
+                    upload_dir=root / "uploads",
+                    app_field_encryption_key=key,
+                )
+
     def test_import_reports_pg_restore_failure(self):
         import subprocess
 

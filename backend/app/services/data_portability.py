@@ -23,6 +23,14 @@ class BackupCommandError(RuntimeError):
     pass
 
 
+def _is_ignorable_pg_restore_warning(detail: str) -> bool:
+    return (
+        'unrecognized configuration parameter \"transaction_timeout\"' in detail
+        and 'SET transaction_timeout = 0' in detail
+        and 'errors ignored on restore: 1' in detail
+    )
+
+
 def key_fingerprint(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
@@ -43,10 +51,17 @@ def _write_uploads(archive: ZipFile, upload_dir: Path) -> None:
             archive.write(path, UPLOADS_PREFIX + path.relative_to(upload_dir).as_posix())
 
 
+def _clear_directory_contents(directory: Path) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    for child in directory.iterdir():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
 def _restore_uploads(archive: ZipFile, upload_dir: Path) -> None:
-    if upload_dir.exists():
-        shutil.rmtree(upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    _clear_directory_contents(upload_dir)
     for name in archive.namelist():
         if not name.startswith(UPLOADS_PREFIX) or name.endswith("/"):
             continue
@@ -147,6 +162,8 @@ def import_backup(
             raise BackupToolMissingError("pg_restore is not installed or not available in PATH.") from exc
         except subprocess.CalledProcessError as exc:
             detail = (exc.stderr or exc.stdout or str(exc)).strip()
+            if _is_ignorable_pg_restore_warning(detail):
+                return
             raise BackupCommandError(f"pg_restore failed: {detail}") from exc
 
 
