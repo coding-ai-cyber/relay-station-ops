@@ -59,6 +59,24 @@ class DataPortabilityTests(unittest.TestCase):
             command = run.call_args.args[0]
             self.assertEqual(command[-1], "postgresql://user:pass@postgres:5432/db")
 
+    def test_export_reports_missing_pg_dump(self):
+        from app.services.data_portability import BackupToolMissingError, export_backup
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / "backup.zip"
+
+            with patch("app.services.data_portability.subprocess.run", side_effect=FileNotFoundError):
+                with self.assertRaises(BackupToolMissingError) as raised:
+                    export_backup(
+                        output_path=output,
+                        database_url="postgresql://user:pass@localhost:5432/db",
+                        upload_dir=root / "uploads",
+                        app_field_encryption_key="field-key-12345678901234567890",
+                    )
+
+            self.assertIn("pg_dump", str(raised.exception))
+
     def test_import_rejects_mismatched_encryption_key_without_force(self):
         from app.services.data_portability import import_backup
 

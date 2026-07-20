@@ -12,7 +12,7 @@ from app.api.deps import require_roles
 from app.core.config import settings
 from app.core.enums import UserRole
 from app.models.user import User
-from app.services.data_portability import export_backup, import_backup
+from app.services.data_portability import BackupToolMissingError, export_backup, import_backup
 
 router = APIRouter(prefix="/api/system-maintenance", tags=["system-maintenance"])
 
@@ -72,12 +72,15 @@ def create_backup(
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     output_path = BACKUP_DIR / f"relay-station-ops-backup-{timestamp}.zip"
-    path = export_backup(
-        output_path=output_path,
-        database_url=settings.database_url,
-        upload_dir=_upload_dir(),
-        app_field_encryption_key=settings.app_field_encryption_key,
-    )
+    try:
+        path = export_backup(
+            output_path=output_path,
+            database_url=settings.database_url,
+            upload_dir=_upload_dir(),
+            app_field_encryption_key=settings.app_field_encryption_key,
+        )
+    except BackupToolMissingError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return {
         "filename": path.name,
         "size_bytes": path.stat().st_size if path.exists() else 0,

@@ -53,6 +53,24 @@ class SystemMaintenanceRouteTests(unittest.TestCase):
         )
         self.assertEqual(result["filename"], "backup.zip")
 
+    def test_create_backup_reports_missing_pg_dump(self):
+        from fastapi import HTTPException
+
+        from app.api.routes import system_maintenance
+        from app.services.data_portability import BackupToolMissingError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            system_maintenance.BACKUP_DIR = Path(tmp)
+            with patch(
+                "app.api.routes.system_maintenance.export_backup",
+                side_effect=BackupToolMissingError("pg_dump is not installed or not available in PATH."),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    system_maintenance.create_backup(current_user=object())
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertIn("pg_dump", raised.exception.detail)
+
     def test_import_backup_upload_uses_portability_service(self):
         from app.api.routes import system_maintenance
 

@@ -15,6 +15,10 @@ DATABASE_DUMP_NAME = "database.dump"
 UPLOADS_PREFIX = "uploads/"
 
 
+class BackupToolMissingError(RuntimeError):
+    pass
+
+
 def key_fingerprint(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
@@ -84,7 +88,10 @@ def export_backup(
             str(dump_path),
             _libpq_database_url(database_url),
         ]
-        subprocess.run(command, check=True)
+        try:
+            subprocess.run(command, check=True)
+        except FileNotFoundError as exc:
+            raise BackupToolMissingError("pg_dump is not installed or not available in PATH.") from exc
         if not dump_path.exists():
             dump_path.write_bytes(b"")
 
@@ -127,7 +134,10 @@ def import_backup(
             _libpq_database_url(database_url),
             str(dump_path),
         ]
-        subprocess.run(command, check=True)
+        try:
+            subprocess.run(command, check=True)
+        except FileNotFoundError as exc:
+            raise BackupToolMissingError("pg_restore is not installed or not available in PATH.") from exc
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
