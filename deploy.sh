@@ -8,11 +8,14 @@ case "$MODE" in
   docker)
     exec "$ROOT_DIR/scripts/install-docker.sh"
     ;;
+  image)
+    exec "$ROOT_DIR/scripts/install-image.sh"
+    ;;
   native)
     exec "$ROOT_DIR/scripts/install-native.sh"
     ;;
   *)
-    echo "Usage: ./deploy.sh {docker|native}"
+    echo "Usage: ./deploy.sh {docker|image|native}"
     exit 2
     ;;
 esac

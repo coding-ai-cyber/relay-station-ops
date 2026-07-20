@@ -50,8 +50,7 @@ http://127.0.0.1:8080
 如果使用 GitHub Container Registry 镜像部署：
 
 ```bash
-docker compose -p relay-station-ops -f docker-compose.image.yml pull
-docker compose -p relay-station-ops -f docker-compose.image.yml up -d
+./deploy.sh image
 ```
 
 默认镜像地址：
@@ -171,8 +170,7 @@ Docker 部署：
 
 ```bash
 git pull
-docker compose -p relay-station-ops -f docker-compose.image.yml pull
-docker compose -p relay-station-ops -f docker-compose.image.yml up -d
+./scripts/upgrade.sh image
 ```
 
 后台页面也会展示升级命令：
