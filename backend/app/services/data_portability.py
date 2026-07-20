@@ -19,6 +19,14 @@ def key_fingerprint(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _libpq_database_url(database_url: str) -> str:
+    return database_url.replace("postgresql+psycopg://", "postgresql://", 1).replace(
+        "postgresql+psycopg2://",
+        "postgresql://",
+        1,
+    )
+
+
 def _write_uploads(archive: ZipFile, upload_dir: Path) -> None:
     if not upload_dir.exists():
         return
@@ -74,7 +82,7 @@ def export_backup(
             "--exclude-table-data=audit_logs",
             "--file",
             str(dump_path),
-            database_url,
+            _libpq_database_url(database_url),
         ]
         subprocess.run(command, check=True)
         if not dump_path.exists():
@@ -116,7 +124,7 @@ def import_backup(
             "--no-owner",
             "--no-privileges",
             "--dbname",
-            database_url,
+            _libpq_database_url(database_url),
             str(dump_path),
         ]
         subprocess.run(command, check=True)

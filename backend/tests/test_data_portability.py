@@ -41,6 +41,24 @@ class DataPortabilityTests(unittest.TestCase):
             self.assertEqual(metadata["excluded_tables"], ["audit_logs"])
             self.assertEqual(metadata["app_field_encryption_key_fingerprint"][:7], "sha256:")
 
+    def test_export_converts_sqlalchemy_driver_url_for_pg_dump(self):
+        from app.services.data_portability import export_backup
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / "backup.zip"
+
+            with patch("app.services.data_portability.subprocess.run") as run:
+                export_backup(
+                    output_path=output,
+                    database_url="postgresql+psycopg://user:pass@postgres:5432/db",
+                    upload_dir=root / "uploads",
+                    app_field_encryption_key="field-key-12345678901234567890",
+                )
+
+            command = run.call_args.args[0]
+            self.assertEqual(command[-1], "postgresql://user:pass@postgres:5432/db")
+
     def test_import_rejects_mismatched_encryption_key_without_force(self):
         from app.services.data_portability import import_backup
 
@@ -100,6 +118,7 @@ class DataPortabilityTests(unittest.TestCase):
             command = run.call_args.args[0]
             self.assertIn("--clean", command)
             self.assertIn("--if-exists", command)
+            self.assertEqual(command[-2], "postgresql://user:pass@localhost:5432/db")
             self.assertEqual((root / "uploads" / "voucher.txt").read_text(encoding="utf-8"), "voucher")
 
 
