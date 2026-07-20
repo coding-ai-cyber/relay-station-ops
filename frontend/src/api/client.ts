@@ -2,7 +2,7 @@ export type ApiError = {
   detail?: string;
 };
 
-const TOKEN_KEY = "sub2api_ops_token";
+const TOKEN_KEY = "relay_station_ops_token";
 
 type ApiRequestOptions = RequestInit & {
   timeoutMs?: number;

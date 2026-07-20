@@ -101,7 +101,7 @@ export const auditDetailOptions = [
 ];
 
 export const serverUsageOptions = [
-  { value: "sub2api_main", label: "sub2api 主服务" },
+  { value: "sub2api_main", label: "中转站主服务" },
   { value: "database", label: "数据库" },
   { value: "proxy_access", label: "代理访问" },
   { value: "registrar", label: "注册机" },

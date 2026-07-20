@@ -1,5 +1,5 @@
 {
-  "name": "sub2api-ops-frontend",
+  "name": "relay-station-ops-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -25,4 +25,3 @@
     "vite": "^7.2.7"
   }
 }
-

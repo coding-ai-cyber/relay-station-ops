@@ -14,7 +14,7 @@ export function LoginPage() {
         <div className="login-form-wrap">
           <div className="login-brand">
             <span className="login-brand-mark">S</span>
-            <span>Sub2API Ops</span>
+            <span>Relay Station Ops</span>
           </div>
           <Typography.Title level={1} className="login-title">
             经营管理系统

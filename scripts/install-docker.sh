@@ -26,8 +26,8 @@ fi
 
 if [ ! -f .env ]; then
   cat > .env <<EOF
-POSTGRES_DB=sub2api_ops
-POSTGRES_USER=sub2api_ops
+POSTGRES_DB=relay_station_ops
+POSTGRES_USER=relay_station_ops
 POSTGRES_PASSWORD=$(random_secret)
 APP_PORT=${APP_PORT:-8080}
 EOF
@@ -51,7 +51,7 @@ PY
   echo "Created backend/.env with generated secrets."
 fi
 
-docker compose -p sub2api-ops -f docker-compose.prod.yml up -d --build
+docker compose -p relay-station-ops -f docker-compose.prod.yml up -d --build
 
 cat <<'EOF'
 Docker deployment started.
@@ -60,5 +60,5 @@ Open:
   http://127.0.0.1:8080
 
 Create or reset the first admin account:
-  docker compose -p sub2api-ops -f docker-compose.prod.yml exec backend python -m app.scripts.create_admin --username <admin> --password <strong-password> --reset-password
+  docker compose -p relay-station-ops -f docker-compose.prod.yml exec backend python -m app.scripts.create_admin --username <admin> --password <strong-password> --reset-password
 EOF

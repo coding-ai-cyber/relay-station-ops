@@ -1,21 +1,20 @@
 services:
   postgres:
     image: postgres:16
-    container_name: sub2api-ops-postgres
+    container_name: relay-station-ops-postgres
     environment:
-      POSTGRES_DB: sub2api_ops
-      POSTGRES_USER: sub2api_ops
-      POSTGRES_PASSWORD: sub2api_ops
+      POSTGRES_DB: relay_station_ops
+      POSTGRES_USER: relay_station_ops
+      POSTGRES_PASSWORD: relay_station_ops
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sub2api_ops -d sub2api_ops"]
+      test: ["CMD-SHELL", "pg_isready -U relay_station_ops -d relay_station_ops"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
   postgres_data:
-

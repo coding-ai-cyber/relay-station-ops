@@ -33,12 +33,12 @@ upgrade_native() {
 }
 
 upgrade_docker() {
-  if docker compose -p sub2api-ops -f docker-compose.prod.yml ps backend >/dev/null 2>&1; then
+  if docker compose -p relay-station-ops -f docker-compose.prod.yml ps backend >/dev/null 2>&1; then
     local container_backup="/tmp/pre-upgrade-$STAMP.zip"
-    docker compose -p sub2api-ops -f docker-compose.prod.yml exec -T backend \
+    docker compose -p relay-station-ops -f docker-compose.prod.yml exec -T backend \
       python -m app.scripts.export_data --output "$container_backup"
     local backend_container
-    backend_container="$(docker compose -p sub2api-ops -f docker-compose.prod.yml ps -q backend)"
+    backend_container="$(docker compose -p relay-station-ops -f docker-compose.prod.yml ps -q backend)"
     docker cp "$backend_container:$container_backup" "$BACKUP_DIR/pre-upgrade-$STAMP.zip"
     echo "Backup created: $BACKUP_DIR/pre-upgrade-$STAMP.zip"
   else
@@ -48,8 +48,8 @@ upgrade_docker() {
   if command -v git >/dev/null 2>&1 && [ -d .git ]; then
     git pull --ff-only || echo "git pull skipped or failed; continue with current files."
   fi
-  docker compose -p sub2api-ops -f docker-compose.prod.yml up -d --build
-  docker compose -p sub2api-ops -f docker-compose.prod.yml exec -T backend python -m alembic -c /app/alembic.ini upgrade head
+  docker compose -p relay-station-ops -f docker-compose.prod.yml up -d --build
+  docker compose -p relay-station-ops -f docker-compose.prod.yml exec -T backend python -m alembic -c /app/alembic.ini upgrade head
 }
 
 case "$MODE" in
@@ -60,7 +60,7 @@ case "$MODE" in
     upgrade_docker
     ;;
   auto)
-    if docker compose -p sub2api-ops -f docker-compose.prod.yml ps >/dev/null 2>&1; then
+    if docker compose -p relay-station-ops -f docker-compose.prod.yml ps >/dev/null 2>&1; then
       upgrade_docker
     else
       upgrade_native

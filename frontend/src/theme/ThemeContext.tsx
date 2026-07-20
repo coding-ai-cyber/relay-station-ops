@@ -7,7 +7,7 @@ export type AppThemeContextValue = {
   toggleMode: () => void;
 };
 
-export const APP_THEME_STORAGE_KEY = "sub2api_ops_theme";
+export const APP_THEME_STORAGE_KEY = "relay_station_ops_theme";
 
 export const AppThemeContext = createContext<AppThemeContextValue | null>(null);
 

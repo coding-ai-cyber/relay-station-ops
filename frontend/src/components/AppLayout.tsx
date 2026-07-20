@@ -109,7 +109,7 @@ function Brand() {
       </div>
       <div>
         <Typography.Title level={4} className="brand-title">
-          Sub2API Ops
+          Relay Station Ops
         </Typography.Title>
         <div className="brand-subtitle">经营管理后台</div>
       </div>

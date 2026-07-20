@@ -71,7 +71,7 @@ def create_backup(
     del current_user
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
-    output_path = BACKUP_DIR / f"sub2api-ops-backup-{timestamp}.zip"
+    output_path = BACKUP_DIR / f"relay-station-ops-backup-{timestamp}.zip"
     path = export_backup(
         output_path=output_path,
         database_url=settings.database_url,

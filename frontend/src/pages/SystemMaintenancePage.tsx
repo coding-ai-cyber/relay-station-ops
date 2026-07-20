@@ -100,7 +100,7 @@ export function SystemMaintenancePage() {
           </Button>
         </div>
         <Space wrap size={12}>
-          <Tag color="blue">{status?.app_name ?? "Sub2API Ops"}</Tag>
+          <Tag color="blue">{status?.app_name ?? "Relay Station Ops"}</Tag>
           <Tag color={status?.app_env === "production" ? "green" : "gold"}>
             {status?.app_env ?? "-"}
           </Tag>

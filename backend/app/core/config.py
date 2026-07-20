@@ -8,12 +8,12 @@ ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
-    app_name: str = "Sub2API Ops"
+    app_name: str = "Relay Station Ops"
     app_env: str = "local"
     app_debug: bool = True
     app_secret_key: str = Field(min_length=32)
     app_field_encryption_key: str = Field(min_length=32)
-    database_url: str = "postgresql+psycopg://sub2api_ops:sub2api_ops@localhost:5432/sub2api_ops"
+    database_url: str = "postgresql+psycopg://relay_station_ops:relay_station_ops@localhost:5432/relay_station_ops"
     access_token_expire_minutes: int = 1440
     file_storage_dir: str = "storage/uploads"
     shop_monitor_auto_sync_enabled: bool = True
