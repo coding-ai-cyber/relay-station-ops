@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.agents/
+.superpowers/
+.tmp_sub2api_repo/
+.ruff_cache/
+.mypy_cache/
+
+# Environments
+.venv/
+backend/.venv/
+.env
+backend/.env
+
+# Local data
+*.db
+*.sqlite
+*.dump
+*.zip
+*.log
+uploads/
+backups/
+backend/storage/uploads/
+output/
+.playwright-cli/
+
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+frontend/node_modules/
+frontend/dist/
+frontend/.vite-dev.pid
+frontend/vite.config.d.ts
+frontend/vite.config.js
