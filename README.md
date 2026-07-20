@@ -57,8 +57,8 @@ docker compose -p relay-station-ops -f docker-compose.image.yml up -d
 默认镜像地址：
 
 ```text
-ghcr.io/838530761/relay-station-ops-backend:latest
-ghcr.io/838530761/relay-station-ops-frontend:latest
+ghcr.io/coding-ai-cyber/relay-station-ops-backend:latest
+ghcr.io/coding-ai-cyber/relay-station-ops-frontend:latest
 ```
 
 如果镜像是私有包，服务器需要先登录：
