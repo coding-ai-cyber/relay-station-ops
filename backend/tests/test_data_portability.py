@@ -139,6 +139,34 @@ class DataPortabilityTests(unittest.TestCase):
             self.assertEqual(command[-2], "postgresql://user:pass@localhost:5432/db")
             self.assertEqual((root / "uploads" / "voucher.txt").read_text(encoding="utf-8"), "voucher")
 
+    def test_import_reports_pg_restore_failure(self):
+        import subprocess
+
+        from app.services.data_portability import BackupCommandError, import_backup, key_fingerprint
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = "field-key-12345678901234567890"
+            backup = root / "backup.zip"
+            with zipfile.ZipFile(backup, "w") as archive:
+                archive.writestr(
+                    "metadata.json",
+                    json.dumps({"app_field_encryption_key_fingerprint": key_fingerprint(key)}),
+                )
+                archive.writestr("database.dump", b"dump")
+
+            error = subprocess.CalledProcessError(1, ["pg_restore"], stderr="restore failed")
+            with patch("app.services.data_portability.subprocess.run", side_effect=error):
+                with self.assertRaises(BackupCommandError) as raised:
+                    import_backup(
+                        input_path=backup,
+                        database_url="postgresql://user:pass@localhost:5432/db",
+                        upload_dir=root / "uploads",
+                        app_field_encryption_key=key,
+                    )
+
+            self.assertIn("restore failed", str(raised.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

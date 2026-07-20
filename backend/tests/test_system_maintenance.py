@@ -104,6 +104,75 @@ class SystemMaintenanceRouteTests(unittest.TestCase):
         self.assertTrue(importer.call_args.kwargs["force"])
         self.assertEqual(result["status"], "imported")
 
+    def test_import_backup_upload_reports_key_mismatch(self):
+        from fastapi import HTTPException
+
+        from app.api.routes import system_maintenance
+
+        class Upload:
+            filename = "backup.zip"
+
+            def __init__(self) -> None:
+                self.file = self
+                self.closed = False
+
+            def read(self, size: int = -1) -> bytes:
+                del size
+                if self.closed:
+                    return b""
+                self.closed = True
+                return b"zip"
+
+            def close(self) -> None:
+                self.closed = True
+
+        with tempfile.TemporaryDirectory() as tmp:
+            system_maintenance.BACKUP_DIR = Path(tmp)
+            with patch(
+                "app.api.routes.system_maintenance.import_backup",
+                side_effect=ValueError("Backup APP_FIELD_ENCRYPTION_KEY fingerprint does not match"),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    system_maintenance.import_backup_upload(upload=Upload(), current_user=object())
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertIn("APP_FIELD_ENCRYPTION_KEY", raised.exception.detail)
+
+    def test_import_backup_upload_reports_restore_failure(self):
+        from fastapi import HTTPException
+
+        from app.api.routes import system_maintenance
+        from app.services.data_portability import BackupCommandError
+
+        class Upload:
+            filename = "backup.zip"
+
+            def __init__(self) -> None:
+                self.file = self
+                self.closed = False
+
+            def read(self, size: int = -1) -> bytes:
+                del size
+                if self.closed:
+                    return b""
+                self.closed = True
+                return b"zip"
+
+            def close(self) -> None:
+                self.closed = True
+
+        with tempfile.TemporaryDirectory() as tmp:
+            system_maintenance.BACKUP_DIR = Path(tmp)
+            with patch(
+                "app.api.routes.system_maintenance.import_backup",
+                side_effect=BackupCommandError("pg_restore failed: restore failed"),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    system_maintenance.import_backup_upload(upload=Upload(), current_user=object())
+
+        self.assertEqual(raised.exception.status_code, 500)
+        self.assertIn("pg_restore failed", raised.exception.detail)
+
 
 if __name__ == "__main__":
     unittest.main()

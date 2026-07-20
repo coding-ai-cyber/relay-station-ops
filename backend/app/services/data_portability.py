@@ -19,6 +19,10 @@ class BackupToolMissingError(RuntimeError):
     pass
 
 
+class BackupCommandError(RuntimeError):
+    pass
+
+
 def key_fingerprint(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
@@ -89,9 +93,12 @@ def export_backup(
             _libpq_database_url(database_url),
         ]
         try:
-            subprocess.run(command, check=True)
+            subprocess.run(command, check=True, capture_output=True, text=True)
         except FileNotFoundError as exc:
             raise BackupToolMissingError("pg_dump is not installed or not available in PATH.") from exc
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stderr or exc.stdout or str(exc)).strip()
+            raise BackupCommandError(f"pg_dump failed: {detail}") from exc
         if not dump_path.exists():
             dump_path.write_bytes(b"")
 
@@ -135,9 +142,12 @@ def import_backup(
             str(dump_path),
         ]
         try:
-            subprocess.run(command, check=True)
+            subprocess.run(command, check=True, capture_output=True, text=True)
         except FileNotFoundError as exc:
             raise BackupToolMissingError("pg_restore is not installed or not available in PATH.") from exc
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stderr or exc.stdout or str(exc)).strip()
+            raise BackupCommandError(f"pg_restore failed: {detail}") from exc
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:

@@ -12,7 +12,12 @@ from app.api.deps import require_roles
 from app.core.config import settings
 from app.core.enums import UserRole
 from app.models.user import User
-from app.services.data_portability import BackupToolMissingError, export_backup, import_backup
+from app.services.data_portability import (
+    BackupCommandError,
+    BackupToolMissingError,
+    export_backup,
+    import_backup,
+)
 
 router = APIRouter(prefix="/api/system-maintenance", tags=["system-maintenance"])
 
@@ -81,6 +86,8 @@ def create_backup(
         )
     except BackupToolMissingError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except BackupCommandError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     return {
         "filename": path.name,
         "size_bytes": path.stat().st_size if path.exists() else 0,
@@ -115,13 +122,20 @@ def import_backup_upload(
     try:
         with temp_path.open("wb") as output:
             shutil.copyfileobj(upload.file, output)
-        import_backup(
-            input_path=temp_path,
-            database_url=settings.database_url,
-            upload_dir=_upload_dir(),
-            app_field_encryption_key=settings.app_field_encryption_key,
-            force=force,
-        )
+        try:
+            import_backup(
+                input_path=temp_path,
+                database_url=settings.database_url,
+                upload_dir=_upload_dir(),
+                app_field_encryption_key=settings.app_field_encryption_key,
+                force=force,
+            )
+        except BackupToolMissingError as exc:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        except BackupCommandError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     finally:
         upload.file.close()
         temp_path.unlink(missing_ok=True)
